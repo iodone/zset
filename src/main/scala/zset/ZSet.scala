@@ -24,14 +24,6 @@ class ZSet[Data, Weight: WeightType](
   cleanZeroWeights()
 
   /**
-   * Merge weights, returning None if result is zero (for map operations)
-   */
-  private def merger(oldWeight: Weight, newWeight: Weight): Option[Weight] = {
-    val result = oldWeight + newWeight
-    if (result.isZero) None else Some(result)
-  }
-
-  /**
    * Number of entries with non-zero weights
    */
   def entryCount: Int = data.size
@@ -103,7 +95,7 @@ class ZSet[Data, Weight: WeightType](
   /**
    * Union of two Z-sets (add weights)
    */
-  def union(other: ZSet[Data, Weight]): ZSet[Data, Weight] = {
+  def add(other: ZSet[Data, Weight]): ZSet[Data, Weight] = {
     val keys = data.keySet ++ other.data.keySet
     val resultData = keys.foldLeft(immutable.Map.empty[Data, Weight]) { (acc, key) =>
       val thisWeight     = data.getOrElse(key, weightType.zero)
@@ -115,9 +107,9 @@ class ZSet[Data, Weight: WeightType](
   }
 
   /**
-   * Difference of two Z-sets (subtract weights)
+   * Subtract two Z-sets (subtract weights) Z-set 减法语义：A - B = A + (-B)，包含所有在 A 或 B 中的元素
    */
-  def difference(other: ZSet[Data, Weight]): ZSet[Data, Weight] = {
+  def subtract(other: ZSet[Data, Weight]): ZSet[Data, Weight] = {
     val keys = data.keySet ++ other.data.keySet
     val resultData = keys.foldLeft(immutable.Map.empty[Data, Weight]) { (acc, key) =>
       val thisWeight     = data.getOrElse(key, weightType.zero)
@@ -137,10 +129,9 @@ class ZSet[Data, Weight: WeightType](
         val newValue = f(value)
         acc.get(newValue) match {
           case Some(existingWeight) =>
-            merger(existingWeight, weight) match {
-              case Some(newWeight) => acc + (newValue -> newWeight)
-              case None            => acc - newValue
-            }
+            val combinedWeight = existingWeight + weight
+            if (combinedWeight.isZero) acc - newValue
+            else acc + (newValue -> combinedWeight)
           case None => acc + (newValue -> weight)
         }
     }
@@ -157,14 +148,27 @@ class ZSet[Data, Weight: WeightType](
 
   /**
    * FlatMap operation for Z-sets
+   *
+   * 实现说明：
+   *   1. flatMap 将每个元素映射为一个 Z-set，然后将所有结果合并 2. 关键在于权重的正确处理：如果原始元素权重为 w，映射结果中每个元素的权重为 w'，
+   *      那么最终结果中该元素的权重应该是 w * w' 3. 使用 scale 操作确保权重语义正确：scale(weight) 将 Z-set 中所有权重乘以 weight 4. 使用
+   *      union 操作合并多个 Z-set，自动处理重复元素的权重累加
+   *
+   * 例子： 原 Z-set: {a => 2, b => 3} 映射函数 f: a -> {x => 1, y => 2}, b -> {y => 1, z => 1}
+   *
+   * 处理过程：
+   *   - a(权重2) -> {x => 1, y => 2} -> scale(2) -> {x => 2, y => 4}
+   *   - b(权重3) -> {y => 1, z => 1} -> scale(3) -> {y => 3, z => 3}
+   *   - 合并: {x => 2, y => 4} ∪ {y => 3, z => 3} = {x => 2, y => 7, z => 3}
    */
   def flatMap[NewData](f: Data => ZSet[NewData, Weight]): ZSet[NewData, Weight] = {
     var result = ZSet.empty[NewData, Weight]
     data.foreach { (value, weight) =>
       val mappedZSet = f(value)
       // Scale the mapped Z-set by the weight of the original value
+      // 这确保了权重语义的正确性：原权重 * 映射后权重 = 最终权重
       val scaledZSet = mappedZSet.scale(weight)
-      result = result.union(scaledZSet)
+      result = result.add(scaledZSet)
     }
     result
   }

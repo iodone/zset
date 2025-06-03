@@ -118,21 +118,21 @@ class ZSetSpec extends FunSuite {
     assertEquals(distinct.entryCount, 2)
   }
 
-  test("union operation adds weights") {
+  test("add operation adds weights") {
     val zset1 = ZSet.fromPairs(List(("a", 2), ("b", 3)))
     val zset2 = ZSet.fromPairs(List(("a", 1), ("c", 4)))
 
-    val union = zset1.union(zset2)
+    val union = zset1.add(zset2)
     assertEquals(union.getWeight("a"), 3)
     assertEquals(union.getWeight("b"), 3)
     assertEquals(union.getWeight("c"), 4)
   }
 
-  test("union with canceling weights") {
+  test("add operation with canceling weights") {
     val zset1 = ZSet.fromPairs(List(("a", 3), ("b", 2)))
     val zset2 = ZSet.fromPairs(List(("a", -3), ("c", 1)))
 
-    val union = zset1.union(zset2)
+    val union = zset1.add(zset2)
     assertEquals(union.getWeight("a"), 0)
     assertEquals(union.getWeight("b"), 2)
     assertEquals(union.getWeight("c"), 1)
@@ -143,7 +143,7 @@ class ZSetSpec extends FunSuite {
     val zset1 = ZSet.fromPairs(List(("a", 5), ("b", 3)))
     val zset2 = ZSet.fromPairs(List(("a", 2), ("c", 1)))
 
-    val diff = zset1.difference(zset2)
+    val diff = zset1.subtract(zset2)
     assertEquals(diff.getWeight("a"), 3)
     assertEquals(diff.getWeight("b"), 3)
     assertEquals(diff.getWeight("c"), -1)
