@@ -1,5 +1,7 @@
 package com.example.zset
 
+import com.example.zset.WeightType.{*, given}
+
 /**
  * Database operations factory and given instances for ZSet
  */
@@ -107,10 +109,17 @@ object ZSetDB {
         right.filter(_._1 == k).map { case (_, b) => (k, a, b) }
       }
 
+    def aggregate[Data, A](
+        container: ZSet[Data, W],
+        init: A,
+        fold: (A, Data) => A
+    ): A = container.aggregate(init)((acc, data, _) => fold(acc, data))
+
     def groupBy[Data, Key](
         container: ZSet[Data, W],
         keyExtractor: Data => Key
     ): ZSet[(Key, Int), W] = {
+      // 按 key 分组，计算每组的元素个数
       val grouped = container.entries.groupBy { case (data, _) => keyExtractor(data) }
       val pairs = grouped.map { case (key, entries) =>
         (key, entries.size)
@@ -121,8 +130,61 @@ object ZSetDB {
     def count[Data](
         container: ZSet[Data, W]
     ): ZSet[(Data, Int), W] = {
-      val counts = container.entries.map { case (data, weight) => (data, 1) }
+      // 返回每个元素及其出现次数（1）
+      val counts = container.entries.map { case (data, _) => (data, 1) }
       ZSet.fromIterable(counts)
+    }
+
+    def sum[Data, N: Numeric](
+        container: ZSet[Data, W],
+        extract: Data => N
+    ): N = {
+      val numeric = summon[Numeric[N]]
+      container.aggregate(numeric.zero) { (acc, data, weight) =>
+        val value = extract(data)
+        // 使用 WeightType 的 toNumeric 方法将权重转换为数值并乘以值
+        val weightedValue = numeric.times(value, weight.toN[N])
+        numeric.plus(acc, weightedValue)
+      }
+    }
+
+    def max[Data, V: Ordering](
+        container: ZSet[Data, W],
+        extract: Data => V
+    ): Option[V] = {
+      val ordering = summon[Ordering[V]]
+      container.aggregate(Option.empty[V]) { (acc, data, _) =>
+        val value = extract(data)
+        acc match {
+          case None => Some(value)
+          case Some(currentMax) => Some(ordering.max(currentMax, value))
+        }
+      }
+    }
+
+    def min[Data, V: Ordering](
+        container: ZSet[Data, W],
+        extract: Data => V
+    ): Option[V] = {
+      val ordering = summon[Ordering[V]]
+      container.aggregate(Option.empty[V]) { (acc, data, _) =>
+        val value = extract(data)
+        acc match {
+          case None => Some(value)
+          case Some(currentMin) => Some(ordering.min(currentMin, value))
+        }
+      }
+    }
+
+    def avg[Data, N: Numeric](
+        container: ZSet[Data, W],
+        extract: Data => N
+    ): Option[Double] = {
+      val numeric = summon[Numeric[N]]
+      val (sum, count) = container.aggregate((numeric.zero, 0)) { case ((sum, count), data, _) =>
+        (numeric.plus(sum, extract(data)), count + 1)
+      }
+      if (count == 0) None else Some(numeric.toDouble(sum) / count)
     }
 
     def distinct[Data](

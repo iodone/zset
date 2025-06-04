@@ -200,6 +200,19 @@ class ZSet[Data, Weight: WeightType](
     new ZSet(resultData)
   }
 
+  /**
+   * 通用聚合操作 - 利用 Scala 3 的简洁语法
+   * 使用 foldLeft 进行权重感知的聚合
+   */
+  def aggregate[A](init: A)(fold: (A, Data, Weight) => A): A =
+    data.foldLeft(init) { case (acc, (value, weight)) => fold(acc, value, weight) }
+
+  /**
+   * 简化的聚合操作，带最终化步骤
+   */
+  def aggregateWith[A, B](init: A)(fold: (A, Data, Weight) => A)(finalize: A => B): B =
+    finalize(aggregate(init)(fold))
+
   override def toString: String = {
     val entries = data.map { case (value, weight) => s"$value => $weight" }.mkString(",\n  ")
     s"ZSet {\n  $entries\n}"

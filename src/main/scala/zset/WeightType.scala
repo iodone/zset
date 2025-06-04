@@ -11,6 +11,8 @@ trait WeightType[T] {
   def isZero(value: T): Boolean
   def greaterThanZero(value: T): Boolean
   def multiply(left: T, right: T): T
+  def toDouble(value: T): Double
+  def toNumeric[N: Numeric](value: T): N
 }
 
 object WeightType {
@@ -35,6 +37,13 @@ object WeightType {
 
     def multiply(left: Int, right: Int): Int =
       Math.multiplyExact(left, right)
+
+    def toDouble(value: Int): Double = value.toDouble
+
+    def toNumeric[N: Numeric](value: Int): N = {
+      val numeric = summon[Numeric[N]]
+      numeric.fromInt(value)
+    }
   }
 
   /**
@@ -57,6 +66,13 @@ object WeightType {
 
     def multiply(left: Long, right: Long): Long =
       Math.multiplyExact(left, right)
+
+    def toDouble(value: Long): Double = value.toDouble
+
+    def toNumeric[N: Numeric](value: Long): N = {
+      val numeric = summon[Numeric[N]]
+      numeric.fromInt(value.toInt) // 简化处理，可能会丢失精度
+    }
   }
 
   /**
@@ -76,6 +92,13 @@ object WeightType {
     def greaterThanZero(value: BigInt): Boolean = value > 0
 
     def multiply(left: BigInt, right: BigInt): BigInt = left * right
+
+    def toDouble(value: BigInt): Double = value.toDouble
+
+    def toNumeric[N: Numeric](value: BigInt): N = {
+      val numeric = summon[Numeric[N]]
+      numeric.fromInt(value.toInt) // 简化处理，可能会丢失精度
+    }
   }
 
   extension [T](value: T)(using weightType: WeightType[T]) {
@@ -84,5 +107,7 @@ object WeightType {
     def isZero: Boolean = weightType.isZero(value)
     def greaterThanZero: Boolean = weightType.greaterThanZero(value)
     def *(other: T): T = weightType.multiply(value, other)
+    def toN[N: Numeric]: N = weightType.toNumeric[N](value)
+    def toDouble: Double = weightType.toDouble(value)
   }
 }

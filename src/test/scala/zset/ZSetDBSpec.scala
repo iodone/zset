@@ -284,4 +284,167 @@ class ZSetDBSpec extends FunSuite {
     assert(!names.contains("Bob"))
     assert(!names.contains("David"))
   }
+
+  // ============== Aggregate API Tests ==============
+  // 基于 Feldera 博客的聚合操作测试
+
+  test("basic aggregate API should work correctly") {
+    val persons = createZSet(
+      Person("Billy", 28),
+      Person("Barbara", 36),
+      Person("John", 12)
+    )
+
+    // COUNT 聚合 - 对应 Feldera 的 COUNT aggregation
+    val count = ZSetDB.zSetDatabase.aggregate(persons, 0, (acc: Int, p: Person) => acc + 1)
+    assertEquals(count, 3)
+
+    // SUM 聚合 - 对应 Feldera 的 SUM aggregation
+    val ageSum = ZSetDB.zSetDatabase.aggregate(persons, 0, (acc: Int, p: Person) => acc + p.age)
+    assertEquals(ageSum, 76) // 28 + 36 + 12
+
+    // Custom aggregation - find oldest person
+    val maxAge = ZSetDB.zSetDatabase.aggregate(persons, 0, (acc: Int, p: Person) => math.max(acc, p.age))
+    assertEquals(maxAge, 36)
+  }
+
+  test("sum aggregation should calculate weighted sum correctly") {
+    case class Item(name: String, price: Double, quantity: Int)
+    val items = createZSet(
+      Item("Apple", 1.5, 10),
+      Item("Banana", 0.8, 15),
+      Item("Orange", 2.0, 8)
+    )
+
+    val totalPrice = ZSetDB.zSetDatabase.sum(items, (item: Item) => item.price)
+    assertEquals(totalPrice, 4.3, 0.001) // 1.5 + 0.8 + 2.0
+
+    val totalQuantity = ZSetDB.zSetDatabase.sum(items, (item: Item) => item.quantity)
+    assertEquals(totalQuantity, 33) // 10 + 15 + 8
+  }
+
+  test("max aggregation should find maximum value") {
+    val persons = createZSet(
+      Person("Alice", 25),
+      Person("Bob", 30),
+      Person("Charlie", 20),
+      Person("Diana", 35)
+    )
+
+    val maxAge = ZSetDB.zSetDatabase.max(persons, (p: Person) => p.age)
+    assertEquals(maxAge, Some(35))
+
+    val maxName = ZSetDB.zSetDatabase.max(persons, (p: Person) => p.name)
+    assertEquals(maxName, Some("Diana")) // 字典序最大
+  }
+
+  test("min aggregation should find minimum value") {
+    val persons = createZSet(
+      Person("Alice", 25),
+      Person("Bob", 30),
+      Person("Charlie", 20),
+      Person("Diana", 35)
+    )
+
+    val minAge = ZSetDB.zSetDatabase.min(persons, (p: Person) => p.age)
+    assertEquals(minAge, Some(20))
+
+    val minName = ZSetDB.zSetDatabase.min(persons, (p: Person) => p.name)
+    assertEquals(minName, Some("Alice")) // 字典序最小
+  }
+
+  test("avg aggregation should calculate average correctly") {
+    val persons = createZSet(
+      Person("Alice", 20),
+      Person("Bob", 30),
+      Person("Charlie", 40)
+    )
+
+    val avgAge = ZSetDB.zSetDatabase.avg(persons, (p: Person) => p.age)
+    assertEquals(avgAge, Some(30.0)) // (20 + 30 + 40) / 3 = 30
+
+    // Test with empty ZSet
+    val empty = ZSet.empty[Person, Int]
+    val emptyAvg = ZSetDB.zSetDatabase.avg(empty, (p: Person) => p.age)
+    assertEquals(emptyAvg, None)
+  }
+
+  test("weight-aware aggregations should handle ZSet weights correctly") {
+    // 创建带权重的 ZSet
+    case class Sale(product: String, amount: Double)
+    val sales = createWeightedZSet(
+      (Sale("Product A", 100.0), 3), // 权重为 3，表示有 3 笔这样的销售
+      (Sale("Product B", 200.0), 2), // 权重为 2，表示有 2 笔这样的销售
+      (Sale("Product C", 150.0), 1)  // 权重为 1，表示有 1 笔这样的销售
+    )
+
+    // 注意：当前的 aggregate API 不考虑权重，只处理唯一元素
+    // 所以结果应该是基于 3 个不同的 Sale 对象
+    val totalSales = ZSetDB.zSetDatabase.aggregate(sales, 0, (acc: Int, sale: Sale) => acc + 1)
+    assertEquals(totalSales, 3) // 3 个不同的销售记录
+
+    val totalAmount = ZSetDB.zSetDatabase.sum(sales, (sale: Sale) => sale.amount)
+    assertEquals(totalAmount, 850.0) // 权重感知的总和：100*3 + 200*2 + 150*1 = 850
+
+    val maxAmount = ZSetDB.zSetDatabase.max(sales, (sale: Sale) => sale.amount)
+    assertEquals(maxAmount, Some(200.0))
+  }
+
+  test("aggregations on empty ZSet should handle edge cases") {
+    val empty = ZSet.empty[Person, Int]
+
+    val count = ZSetDB.zSetDatabase.aggregate(empty, 0, (acc: Int, p: Person) => acc + 1)
+    assertEquals(count, 0)
+
+    val sum = ZSetDB.zSetDatabase.sum(empty, (p: Person) => p.age)
+    assertEquals(sum, 0)
+
+    val max = ZSetDB.zSetDatabase.max(empty, (p: Person) => p.age)
+    assertEquals(max, None)
+
+    val min = ZSetDB.zSetDatabase.min(empty, (p: Person) => p.age)
+    assertEquals(min, None)
+
+    val avg = ZSetDB.zSetDatabase.avg(empty, (p: Person) => p.age)
+    assertEquals(avg, None)
+  }
+
+  test("complex aggregation workflow - Feldera style") {
+    // 模拟一个更复杂的聚合场景，类似 Feldera 博客中的例子
+    case class Transaction(customerId: Int, amount: Double, category: String)
+    val transactions = createZSet(
+      Transaction(1, 100.0, "Electronics"),
+      Transaction(1, 50.0, "Books"),
+      Transaction(2, 200.0, "Electronics"),
+      Transaction(2, 75.0, "Clothing"),
+      Transaction(3, 300.0, "Electronics"),
+      Transaction(3, 25.0, "Books")
+    )
+
+    // 1. 总交易金额
+    val totalAmount = ZSetDB.zSetDatabase.sum(transactions, (t: Transaction) => t.amount)
+    assertEquals(totalAmount, 750.0) // 100+50+200+75+300+25
+
+    // 2. 最大交易金额
+    val maxTransaction = ZSetDB.zSetDatabase.max(transactions, (t: Transaction) => t.amount)
+    assertEquals(maxTransaction, Some(300.0))
+
+    // 3. 平均交易金额
+    val avgTransaction = ZSetDB.zSetDatabase.avg(transactions, (t: Transaction) => t.amount)
+    assertEquals(avgTransaction, Some(125.0)) // 750/6
+
+    // 4. 按类别分组
+    val groupedByCategory = ZSetDB.zSetDatabase.groupBy(transactions, (t: Transaction) => t.category)
+    assertEquals(groupedByCategory.entryCount, 3)
+    assert(groupedByCategory.contains(("Electronics", 3)))
+    assert(groupedByCategory.contains(("Books", 2)))
+    assert(groupedByCategory.contains(("Clothing", 1)))
+
+    // 5. 按客户分组
+    val groupedByCustomer = ZSetDB.zSetDatabase.groupBy(transactions, (t: Transaction) => t.customerId)
+    assertEquals(groupedByCustomer.entryCount, 3)
+    assert(groupedByCustomer.contains((1, 2)))
+    assert(groupedByCustomer.contains((2, 2)))
+    assert(groupedByCustomer.contains((3, 2)))
+  }
 }

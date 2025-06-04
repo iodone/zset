@@ -59,8 +59,16 @@ trait Database[Container[_]] {
   ): Container[(K, A, B)]
 
   /**
-   * Group by operation with key extraction Groups data by a key function and returns key-count
-   * pairs
+   * 基础聚合操作 - 基于 Feldera 的 aggregate API
+   */
+  def aggregate[Data, A](
+      container: Container[Data],
+      init: A,
+      fold: (A, Data) => A
+  ): A
+
+  /**
+   * Group by operation with key extraction
    */
   def groupBy[Data, Key](
       container: Container[Data],
@@ -68,11 +76,43 @@ trait Database[Container[_]] {
   ): Container[(Key, Int)]
 
   /**
-   * Count aggregation operation Counts occurrences of each value
+   * Count aggregation operation
    */
   def count[Data](
       container: Container[Data]
   ): Container[(Data, Int)]
+
+  /**
+   * SUM 聚合操作
+   */
+  def sum[Data, N: Numeric](
+      container: Container[Data],
+      extract: Data => N
+  ): N
+
+  /**
+   * MAX 聚合操作
+   */
+  def max[Data, V: Ordering](
+      container: Container[Data],
+      extract: Data => V
+  ): Option[V]
+
+  /**
+   * MIN 聚合操作
+   */
+  def min[Data, V: Ordering](
+      container: Container[Data],
+      extract: Data => V
+  ): Option[V]
+
+  /**
+   * AVG 聚合操作
+   */
+  def avg[Data, N: Numeric](
+      container: Container[Data],
+      extract: Data => N
+  ): Option[Double]
 
   /**
    * Distinct operation Removes duplicates
@@ -138,11 +178,26 @@ object Database {
     def except(other: Container[Data]): Container[Data] =
       db.except(container, other)
 
+    def aggregate[A](init: A, fold: (A, Data) => A): A =
+      db.aggregate(container, init, fold)
+
     def groupBy[Key](keyExtractor: Data => Key): Container[(Key, Int)] =
       db.groupBy(container, keyExtractor)
 
     def count: Container[(Data, Int)] =
       db.count(container)
+
+    def sum[N: Numeric](extract: Data => N): N =
+      db.sum(container, extract)
+
+    def max[V: Ordering](extract: Data => V): Option[V] =
+      db.max(container, extract)
+
+    def min[V: Ordering](extract: Data => V): Option[V] =
+      db.min(container, extract)
+
+    def avg[N: Numeric](extract: Data => N): Option[Double] =
+      db.avg(container, extract)
 
     def distinct: Container[Data] =
       db.distinct(container)
