@@ -61,7 +61,7 @@ trait Database[Container[_]] {
   /**
    * 基础聚合操作 - 基于 Feldera 的 aggregate API
    */
-  def aggregate[Data, A](
+  def agg[Data, A](
       container: Container[Data],
       init: A,
       fold: (A, Data) => A
@@ -178,8 +178,8 @@ object Database {
     def except(other: Container[Data]): Container[Data] =
       db.except(container, other)
 
-    def aggregate[A](init: A, fold: (A, Data) => A): A =
-      db.aggregate(container, init, fold)
+    def agg[A](init: A, fold: (A, Data) => A): A =
+      db.agg(container, init, fold)
 
     def groupBy[Key](keyExtractor: Data => Key): Container[(Key, Int)] =
       db.groupBy(container, keyExtractor)
@@ -213,3 +213,4 @@ object Database {
 
   }
 }
+

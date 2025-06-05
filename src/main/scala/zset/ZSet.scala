@@ -200,10 +200,6 @@ class ZSet[Data, Weight: WeightType](
     new ZSet(resultData)
   }
 
-  /**
-   * 通用聚合操作 - 利用 Scala 3 的简洁语法
-   * 使用 foldLeft 进行权重感知的聚合
-   */
   def aggregate[A](init: A)(fold: (A, Data, Weight) => A): A =
     data.foldLeft(init) { case (acc, (value, weight)) => fold(acc, value, weight) }
 
@@ -259,6 +255,5 @@ object ZSet {
   ): ZSet[Data, Weight] = {
     val zset = empty[Data, Weight]
     zset.append(value, weight)
-    zset
   }
 }
