@@ -68,9 +68,9 @@ object ZSetDBDemo extends App {
   val engineeringEmployees = employeeDB.where(_.departmentName == "Engineering")
   println(s"工程部员工: ${engineeringEmployees.sortBy(_.name)}")
 
-  // 按部门分组统计员工数量
-  val employeesByDept = employeeDB.groupBy(_.departmentName)
-  println(s"各部门员工数量: ${employeesByDept.sortBy(_._1)}")
+  // 工程部员工薪资总和
+  val engineeringSalary = engineeringEmployees.sum(_.salary)
+  println(s"工程部薪资总和: $engineeringSalary")
 
   // Union操作示例
   val newPersons = ZSetDB(
@@ -116,14 +116,15 @@ object ZSetDBDemo extends App {
   // 案例3: 数据聚合和统计链
   case class SalaryStats(department: String, totalSalary: Int, employeeCount: Int, avgSalary: Double)
 
-  val salaryStatsByDept = employeeDB
-    .groupBy(_.departmentName) // 按部门分组
-    .select { case (dept, count) =>
-      val deptEmployees = employeeDB.where(_.departmentName == dept)
-      val totalSalary   = deptEmployees.sum(_.salary)
-      val avgSalary     = deptEmployees.avg(_.salary.toDouble).getOrElse(0.0)
-      SalaryStats(dept, totalSalary, count, avgSalary)
-    }
+  // 计算各部门薪资统计
+  val departments = List("Engineering", "Sales", "HR")
+  val salaryStatsByDept = departments.map { dept =>
+    val deptEmployees = employeeDB.where(_.departmentName == dept)
+    val totalSalary   = deptEmployees.sum(_.salary)
+    val count         = deptEmployees.underlying.entryCount
+    val avgSalary     = deptEmployees.avg(_.salary.toDouble).getOrElse(0.0)
+    SalaryStats(dept, totalSalary, count, avgSalary)
+  }
   println(s"各部门薪资统计: ${salaryStatsByDept.sortBy(_.avgSalary)}")
 
   // 案例4: 多表关联和数据融合
@@ -170,10 +171,15 @@ object ZSetDBDemo extends App {
       }
       ValidEmployee(emp.name, emp.departmentName, emp.salary, level)
     }
-    .groupBy(_.salaryLevel) // 按级别分组
-    .select { case (level, count) => s"$level: $count 人" }
-    .sortBy(identity)
-  println(s"员工级别分布: ${validatedEmployees}")
+  
+  // 统计各级别员工数量
+  val levelCounts = Map(
+    "Senior" -> validatedEmployees.where(_.salaryLevel == "Senior").underlying.entryCount,
+    "Mid" -> validatedEmployees.where(_.salaryLevel == "Mid").underlying.entryCount,
+    "Junior" -> validatedEmployees.where(_.salaryLevel == "Junior").underlying.entryCount
+  )
+  val levelDistribution = levelCounts.map { case (level, count) => s"$level: $count 人" }.toList.sorted
+  println(s"员工级别分布: $levelDistribution")
 
   // 案例7: 异常检测链 - 找出薪资异常的员工
   val avgSalaryOverall = employeeDB.avg(_.salary.toDouble).getOrElse(0.0)

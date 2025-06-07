@@ -57,7 +57,7 @@ object ZSetDBOps {
     /**
      * Database-style groupBy operation
      */
-    def groupBy[Key](keyExtractor: Data => Key): ZSetDB[(Key, Int), W] =
+    def groupBy[Key](keyExtractor: Data => Key): Map[Key, ZSetDB[Data, W]] =
       db.groupBy(zsetDB, keyExtractor)
 
     /**

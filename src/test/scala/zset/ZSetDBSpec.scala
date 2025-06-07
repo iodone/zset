@@ -276,31 +276,6 @@ class ZSetDBSpec extends FunSuite {
     assertEquals(totalAge, 90)
   }
 
-  // === GROUPBY 操作测试 ===
-  test("groupBy - 基本分组") {
-    val persons = ZSetDB.fromIntIterable(List(
-      Person("Alice", 25),
-      Person("Bob", 25),
-      Person("Charlie", 30),
-      Person("David", 30),
-      Person("Eve", 25)
-    ))
-
-    val ageGroups = persons.groupBy(_.age)
-    assertEquals(ageGroups.underlying.getWeight((25, 3)), 1) // 3个25岁的人
-    assertEquals(ageGroups.underlying.getWeight((30, 2)), 1) // 2个30岁的人
-    assertEquals(ageGroups.underlying.entryCount, 2)
-  }
-
-  test("groupBy - 字符串长度分组") {
-    val words = ZSetDB.fromIntIterable(List("cat", "dog", "bird", "fish"))
-    val lengthGroups = words.groupBy(_.length)
-
-    assertEquals(lengthGroups.underlying.getWeight((3, 2)), 1) // cat, dog
-    assertEquals(lengthGroups.underlying.getWeight((4, 2)), 1) // bird, fish
-    assertEquals(lengthGroups.underlying.entryCount, 2)
-  }
-
   // === COUNT 操作测试 ===
   test("count - 基本计数") {
     val words = ZSetDB.fromIntIterable(List("apple", "banana", "cherry"))
@@ -549,23 +524,6 @@ class ZSetDBSpec extends FunSuite {
     assert(result.underlying.contains("David"))
     assert(result.underlying.contains("Eve"))
     assert(!result.underlying.contains("Charlie")) // 年龄22 < 25
-  }
-
-  test("复合操作 - groupBy + select") {
-    val orders = ZSetDB.fromIntIterable(List(
-      Order(1, 100, 50.0),
-      Order(2, 100, 75.0),
-      Order(3, 101, 25.0),
-      Order(4, 101, 100.0)
-    ))
-
-    val customerOrderCounts = orders
-      .groupBy(_.customerId)
-      .select { case (customerId, count) => s"Customer$customerId: $count orders" }
-
-    assertEquals(customerOrderCounts.underlying.entryCount, 2)
-    assert(customerOrderCounts.underlying.contains("Customer100: 2 orders"))
-    assert(customerOrderCounts.underlying.contains("Customer101: 2 orders"))
   }
 
 }

@@ -67,13 +67,10 @@ trait Database[Container[_]] {
       fold: (A, Data) => A
   ): A
 
-  /**
-   * Group by operation with key extraction
-   */
   def groupBy[Data, Key](
       container: Container[Data],
       keyExtractor: Data => Key
-  ): Container[(Key, Int)]
+  ): Map[Key, Container[Data]]
 
   /**
    * Count aggregation operation
@@ -181,7 +178,7 @@ object Database {
     def agg[A](init: A, fold: (A, Data) => A): A =
       db.agg(container, init, fold)
 
-    def groupBy[Key](keyExtractor: Data => Key): Container[(Key, Int)] =
+    def groupBy[Key](keyExtractor: Data => Key): Map[Key, Container[Data]] =
       db.groupBy(container, keyExtractor)
 
     def count: Container[(Data, Int)] =

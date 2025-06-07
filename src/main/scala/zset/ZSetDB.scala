@@ -125,10 +125,12 @@ object ZSetDB {
     def groupBy[Data, Key](
         container: ZSetDB[Data, W],
         keyExtractor: Data => Key
-    ): ZSetDB[(Key, Int), W] = {
+    ): Map[Key, ZSetDB[Data, W]] = {
       val grouped = container.underlying.entries.groupBy { case (data, _) => keyExtractor(data) }
-      val pairs   = grouped.map { case (key, entries) => (key, entries.size) }
-      ZSetDB(ZSet.fromIterable(pairs))
+      grouped.map { case (key, entries) =>
+        val zset = ZSet.fromPairs(entries)
+        key -> ZSetDB(zset)
+      }
     }
 
     def count[Data](
