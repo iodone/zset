@@ -60,7 +60,7 @@
 **进行中**:
 - [x] ZSet 核心功能测试套件
 - [ ] 修复测试导入问题
-- [ ] ZSetDatabase 操作测试
+- [ ] ZSetDataset 操作测试
 - [ ] 性能基准测试
 - [ ] 边界条件测试
 
@@ -75,7 +75,7 @@
 **目标**: 实现类似 SQL 的操作，支持关系数据库风格的查询
 
 **计划实现**:
-- [ ] `ZSetDatabase` 对象：数据库操作集合
+- [ ] `ZSetDataset` 对象：数据库操作集合
 - [ ] `join`: 连接操作（基于键的笛卡尔积）
 - [ ] `groupBy`: 分组操作
 - [ ] `select`: 投影操作（已实现为 map）
@@ -89,7 +89,7 @@
 
 **实现策略**:
 ```scala
-object ZSetDatabase {
+object ZSetDataset {
   def join[A, B, K](
     left: ZSet[(K, A), Weight], 
     right: ZSet[(K, B), Weight]

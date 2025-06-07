@@ -2,7 +2,7 @@
 
 ## 概述
 
-本项目是基于 [Feldera 的 Z-Set 实现文章](https://www.feldera.com/blog/implementing-z-sets) 和 [数据库计算文章](https://www.feldera.com/blog/database-computations-on-z-sets) 的 Scala 实现。Z-Set（Z-集合）是一种带权重的集合数据结构，每个元素都有一个关联的权重，这使得它特别适合用于增量计算、DBSP（Database Stream Processing）和实时数据库操作。
+本项目是基于 [Feldera 的 Z-Set 实现文章](https://www.feldera.com/blog/implementing-z-sets) 和 [数据库计算文章](https://www.feldera.com/blog/Dataset-computations-on-z-sets) 的 Scala 实现。Z-Set（Z-集合）是一种带权重的集合数据结构，每个元素都有一个关联的权重，这使得它特别适合用于增量计算、DBSP（Dataset Stream Processing）和实时数据库操作。
 
 Z-Set 最初由 [Differential Dataflow](https://github.com/frankmcsherry/differential-dataflow) 项目引入，并在 [DBSP 论文](https://www.cidrdb.org/cidr2023/papers/p19-budiu.pdf) 中得到理论化。Feldera 使用 Z-Set 作为其增量计算引擎的核心数据结构，实现了高效的流式数据库查询处理。
 
@@ -54,7 +54,7 @@ Z-Set 在数学上形成一个阿贝尔群（Abelian Group），继承了整数�
    - 提供丰富的函数式操作API
    - 支持类型安全的泛型操作
 
-3. **ZSetDatabase**: 数据库风格的高级操作
+3. **ZSetDataset**: 数据库风格的高级操作
    - 实现 SQL 风格操作：JOIN、GROUP BY、SELECT、WHERE、UNION 等
    - 支持聚合函数：COUNT、SUM、AVG 等
    - 提供排序和分页功能（sortBy、take）
@@ -254,7 +254,7 @@ val result = ZSet.fromIterable(items, IntegerWeight)
 - `ZSet.fromPairs`: 从(元素,权重)对列表创建
 - `ZSet.single`: 创建包含单个元素的 Z-Set
 
-### 数据库风格操作（ZSetDB）
+### 数据库风格操作（ZDataset）
 
 - `join(left, right)`: 两个 Z-Set 的自然连接
 - `groupBy(zset, keyFunc)`: 按键分组聚合
@@ -286,7 +286,7 @@ val result2 = result1.union(update2)
 
 ### 2. 数据库操作模拟
 
-使用 ZSetDatabase 模拟复杂的数据库操作：
+使用 ZSetDataset 模拟复杂的数据库操作：
 
 ```scala
 // 模拟表连接
@@ -436,7 +436,7 @@ Z-Set 在数学上形成一个阿贝尔群（Abelian Group）：
    - 增量计算的理论基础
    - 数据流处理的数学模型
 
-2. **DBSP (Database Stream Processing)**:
+2. **DBSP (Dataset Stream Processing)**:
    - [CIDR 2023 论文](https://www.cidrdb.org/cidr2023/papers/p19-budiu.pdf)
    - 统一批处理和流处理的理论框架
    - Z-Set 作为核心抽象
@@ -476,7 +476,7 @@ Z-Set 在数学上形成一个阿贝尔群（Abelian Group）：
 
 2. **实现参考**:
    - [Feldera Blog: Implementing Z-sets](https://www.feldera.com/blog/implementing-z-sets)
-   - [Feldera Blog: Database computations on Z-sets](https://www.feldera.com/blog/database-computations-on-z-sets)
+   - [Feldera Blog: Dataset computations on Z-sets](https://www.feldera.com/blog/Dataset-computations-on-z-sets)
 
 3. **理论背景**:
    - Incremental computation and the incremental evaluation of functional programs

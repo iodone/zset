@@ -8,7 +8,7 @@ import com.example.zset.WeightType.{*, given}
  * IndexedZDataset - 索引化的ZSet数据集
  *
  * @param data
- *   内部的Map数据结构，键到ZSetDB的映射
+ *   内部的Map数据结构，键到ZDataset的映射
  * @tparam Key
  *   键类型
  * @tparam Data
@@ -17,21 +17,21 @@ import com.example.zset.WeightType.{*, given}
  *   权重类型
  */
 case class IndexedZDataset[Key, Data, Weight: WeightType](
-    private val data: Map[Key, ZSetDB[Data, Weight]]
+    private val data: Map[Key, ZDataset[Data, Weight]]
 ) {
 
   /**
    * 获取指定键的 ZSet，如果不存在则返回空的 ZSet
    */
-  def getZSet(key: Key): ZSetDB[Data, Weight] =
-    data.getOrElse(key, ZSetDB.empty[Data, Weight])
+  def getZSet(key: Key): ZDataset[Data, Weight] =
+    data.getOrElse(key, ZDataset.empty[Data, Weight])
 
   /**
    * 向指定键添加数据元素
    */
   def append(key: Key, value: Data, weight: Weight): IndexedZDataset[Key, Data, Weight] = {
     val currentZSet = getZSet(key)
-    val newZSet     = ZSetDB(currentZSet.underlying.append(value, weight))
+    val newZSet     = ZDataset(currentZSet.underlying.append(value, weight))
 
     // 如果新的 ZSet 为空，则从索引中移除该键
     if (newZSet.underlying.isEmpty) {
@@ -85,7 +85,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
   def aggregate[A](init: A)(fold: (A, Data, Weight) => A): IndexedZDataset[Key, A, Weight] = {
     val weightType = summon[WeightType[Weight]]
     val newData = data.map { case (key, zset) =>
-      key -> ZSetDB(ZSet.single(zset.underlying.aggregate(init)(fold), weightType.one))
+      key -> ZDataset(ZSet.single(zset.underlying.aggregate(init)(fold), weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -106,7 +106,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
         val weightValue = weight.toN[N]
         numeric.plus(acc, numeric.times(value, weightValue))
       }
-      key -> ZSetDB(ZSet.single(totalSum, weightType.one))
+      key -> ZDataset(ZSet.single(totalSum, weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -123,7 +123,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
     val weightType = summon[WeightType[Weight]]
     val newData = data.map { case (key, zset) =>
       val totalCount = zset.underlying.aggregate(0)((acc, _, _) => acc + 1)
-      key -> ZSetDB(ZSet.single(totalCount, weightType.one))
+      key -> ZDataset(ZSet.single(totalCount, weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -150,7 +150,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
         if (totalWeight.isZero) None
         else Some(numeric.toDouble(weightedSum) / totalWeight.toDouble)
       }
-      key -> ZSetDB(ZSet.single(result, weightType.one))
+      key -> ZDataset(ZSet.single(result, weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -170,7 +170,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
           case Some(currentMax) => Some(ordering.max(currentMax, value))
         }
       }
-      key -> ZSetDB(ZSet.single(result, weightType.one))
+      key -> ZDataset(ZSet.single(result, weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -190,7 +190,7 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
           case Some(currentMin) => Some(ordering.min(currentMin, value))
         }
       }
-      key -> ZSetDB(ZSet.single(result, weightType.one))
+      key -> ZDataset(ZSet.single(result, weightType.one))
     }
     IndexedZDataset(newData)
   }
@@ -222,22 +222,22 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
   /**
    * 扁平化为单个 ZSet[(Key, Data), Weight] 使用allEntries简化实现
    */
-  def flatten[A](combine: (Key, Data) => A): ZSetDB[A, Weight] = {
+  def flatten[A](combine: (Key, Data) => A): ZDataset[A, Weight] = {
     val flattenedPairs = allEntries.map { case (key, data, weight) =>
       (combine(key, data), weight)
     }
-    ZSetDB(ZSet.fromPairs(flattenedPairs))
+    ZDataset(ZSet.fromPairs(flattenedPairs))
   }
 
   /**
-   * 提供到 Map 的隐式转换，以满足 Database trait 的类型要求
+   * 提供到 Map 的隐式转换，以满足 Dataset trait 的类型要求
    */
-  def toMap: Map[Key, ZSetDB[Data, Weight]] = data
+  def toMap: Map[Key, ZDataset[Data, Weight]] = data
 
   /**
    * 提供到标准 Map 的显式转换方法
    */
-  def asMap: Map[Key, ZSetDB[Data, Weight]] = data
+  def asMap: Map[Key, ZDataset[Data, Weight]] = data
 }
 
 object IndexedZDataset {
@@ -247,7 +247,7 @@ object IndexedZDataset {
    * 创建空的 IndexedZDataset
    */
   def empty[Key, Data, Weight: WeightType]: IndexedZDataset[Key, Data, Weight] =
-    IndexedZDataset(Map.empty[Key, ZSetDB[Data, Weight]])
+    IndexedZDataset(Map.empty[Key, ZDataset[Data, Weight]])
 
   /**
    * 从键值对集合创建 IndexedZDataset
@@ -273,7 +273,7 @@ object IndexedZDataset {
    * 从 Map 创建 IndexedZDataset
    */
   def fromMap[Key, Data, Weight: WeightType](
-      map: Map[Key, ZSetDB[Data, Weight]]
+      map: Map[Key, ZDataset[Data, Weight]]
   ): IndexedZDataset[Key, Data, Weight] = IndexedZDataset(map)
 
 }

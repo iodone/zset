@@ -3,14 +3,14 @@ package com.example.zset
 import javax.naming.spi.DirStateFactory.Result
 
 /**
- * Abstract Database API trait defining fundamental database operations This trait provides a
- * minimal generic interface for database-like operations that can be implemented by different
+ * Abstract Dataset API trait defining fundamental Dataset operations This trait provides a
+ * minimal generic interface for Dataset-like operations that can be implemented by different
  * container types.
  *
  * @tparam Container
  *   The container type for data storage
  */
-trait Database[Container[_]] {
+trait Dataset[Container[_]] {
 
   type ResultSet[_, _]
 
@@ -151,19 +151,19 @@ trait Database[Container[_]] {
 }
 
 /**
- * Companion object for Database trait with utility methods
+ * Companion object for Dataset trait with utility methods
  */
-object Database {
+object Dataset {
 
   /**
-   * Create a database instance for any container type that has a Database implementation
+   * Create a Dataset instance for any container type that has a Dataset implementation
    */
-  def apply[Container[_]](using db: Database[Container]): Database[Container] = db
+  def apply[Container[_]](using db: Dataset[Container]): Dataset[Container] = db
 
   /**
-   * Extension methods for containers that have a Database instance
+   * Extension methods for containers that have a Dataset instance
    */
-  extension [Container[_], Data](container: Container[Data])(using db: Database[Container]) {
+  extension [Container[_], Data](container: Container[Data])(using db: Dataset[Container]) {
 
     def select[B](projection: Data => B): Container[B] =
       db.select(container, projection)

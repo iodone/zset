@@ -1,19 +1,19 @@
 package com.example.zset
 
-import com.example.zset.ZSetDB.given
-import com.example.zset.ZSetDBOps.*
+import com.example.zset.ZDataset.given
+import com.example.zset.ZDatasetOps.*
 
-object ZSetDBDemo extends App {
+object ZDatasetDemo extends App {
 
   // Data models
   case class Person(name: String, age: Int)
   case class Department(name: String, budget: Int)
   case class Employee(name: String, departmentName: String, salary: Int)
 
-  println("=== ZSetDB Demo ===")
+  println("=== ZDataset Demo ===")
 
-  // 创建包含人员信息的 ZSetDB
-  val personDB = ZSetDB(
+  // 创建包含人员信息的 ZDataset
+  val personDB = ZDataset(
     Person("Alice", 25),
     Person("Bob", 30),
     Person("Charlie", 35),
@@ -22,7 +22,7 @@ object ZSetDBDemo extends App {
 
   println(s"原始人员数据: ${personDB.sortBy(_.name)}")
 
-  // 使用 Database API 进行查询操作
+  // 使用 Dataset API 进行查询操作
   val names = personDB.select(_.name)
   println(s"人员姓名: ${names.sortBy(identity)}")
 
@@ -43,14 +43,14 @@ object ZSetDBDemo extends App {
   println(s"最小年龄: $minAge")
 
   // 创建部门数据
-  val departmentDB = ZSetDB(
+  val departmentDB = ZDataset(
     Department("Engineering", 1000000),
     Department("Sales", 500000),
     Department("HR", 200000)
   )
 
   // 创建员工数据（包含部门信息）
-  val employeeDB = ZSetDB(
+  val employeeDB = ZDataset(
     Employee("Alice", "Engineering", 80000),
     Employee("Bob", "Sales", 60000),
     Employee("Charlie", "Engineering", 90000),
@@ -73,7 +73,7 @@ object ZSetDBDemo extends App {
   println(s"工程部薪资总和: $engineeringSalary")
 
   // Union操作示例
-  val newPersons = ZSetDB(
+  val newPersons = ZDataset(
     Person("Eve", 26),
     Person("Frank", 32)
   )
@@ -81,7 +81,7 @@ object ZSetDBDemo extends App {
   println(s"合并后的人员: ${allPersons.sortBy(_.name)}")
 
   // Distinct操作
-  val duplicatePersons = ZSetDB(
+  val duplicatePersons = ZDataset(
     Person("Alice", 25),
     Person("Bob", 30),
     Person("Alice", 25) // 重复
@@ -90,7 +90,7 @@ object ZSetDBDemo extends App {
   println(s"去重后的人员: ${uniquePersons.sortBy(_.name)}")
 
   // Cartesian Product示例
-  val titles      = ZSetDB("Mr.", "Ms.")
+  val titles      = ZDataset("Mr.", "Ms.")
   val shortNames  = personDB.select(_.name).take(2)
   val formalNames = titles.cartesianProduct(shortNames, (title, name) => s"$title $name")
   println(s"正式称呼: ${formalNames.sortBy(identity)}")
@@ -243,7 +243,7 @@ object ZSetDBDemo extends App {
     }
     .distinct // 去重
 
-  val employeeReports = ZSetDB.fromIntIterable(
+  val employeeReports = ZDataset.fromIntIterable(
     employeeReportsStrings.sortBy(identity).map(EmployeeReport(_))
   )
   println(s"员工报告:")

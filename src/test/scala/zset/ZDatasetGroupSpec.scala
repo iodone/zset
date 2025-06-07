@@ -1,12 +1,12 @@
 package com.example.zset
 
 import munit.FunSuite
-import com.example.zset.{IndexedZDataset, WeightType, ZSet, ZSetDB}
+import com.example.zset.{IndexedZDataset, WeightType, ZSet, ZDataset}
 import WeightType.{IntegerWeight, LongWeight, given}
-import com.example.zset.ZSetDBOps.*
+import com.example.zset.ZDatasetOps.*
 import com.example.zset.IndexedZDataset.*
 
-class ZSetDBGroupSpec extends FunSuite {
+class ZDatasetGroupSpec extends FunSuite {
 
   // 测试数据类型定义
   case class Employee(name: String, department: String, salary: Double, age: Int)
@@ -15,7 +15,7 @@ class ZSetDBGroupSpec extends FunSuite {
 
   // === 基础 GroupBy + IndexedZDataset 转换测试 ===
   test("groupBy 直接作为 IndexedZDataset") {
-    val employees = ZSetDB.fromIntIterable(
+    val employees = ZDataset.fromIntIterable(
       List(
         Employee("Alice", "Engineering", 80000, 25),
         Employee("Bob", "Engineering", 85000, 30),
@@ -41,7 +41,7 @@ class ZSetDBGroupSpec extends FunSuite {
 
   // === IndexedZDataset 链式聚合操作测试 ===
   test("IndexedZDataset 链式聚合操作 - sum") {
-    val employees = ZSetDB.fromIntIterable(
+    val employees = ZDataset.fromIntIterable(
       List(
         Employee("Alice", "Engineering", 80000, 25),
         Employee("Bob", "Engineering", 85000, 30),
@@ -66,7 +66,7 @@ class ZSetDBGroupSpec extends FunSuite {
   }
 
   test("IndexedZDataset 链式聚合操作 - count") {
-    val students = ZSetDB.fromIntIterable(
+    val students = ZDataset.fromIntIterable(
       List(
         Student("Alice", "A", 95, "Math"),
         Student("Bob", "A", 88, "Math"),
@@ -91,7 +91,7 @@ class ZSetDBGroupSpec extends FunSuite {
   }
 
   test("IndexedZDataset 链式聚合操作 - avg") {
-    val students = ZSetDB.fromIntIterable(
+    val students = ZDataset.fromIntIterable(
       List(
         Student("Alice", "A", 95, "Math"),
         Student("Bob", "A", 85, "Math"),
@@ -115,7 +115,7 @@ class ZSetDBGroupSpec extends FunSuite {
   }
 
   test("IndexedZDataset 链式聚合操作 - max/min") {
-    val sales = ZSetDB.fromIntIterable(
+    val sales = ZDataset.fromIntIterable(
       List(
         Sale(1, "Laptop", 1200, "North"),
         Sale(2, "Mouse", 25, "North"),
@@ -150,7 +150,7 @@ class ZSetDBGroupSpec extends FunSuite {
 
   // === Flatten 操作测试 ===
   test("链式操作：groupBy -> agg -> flatten") {
-    val employees = ZSetDB.fromIntIterable(
+    val employees = ZDataset.fromIntIterable(
       List(
         Employee("Alice", "Engineering", 80000, 25),
         Employee("Bob", "Engineering", 85000, 30),
@@ -159,7 +159,7 @@ class ZSetDBGroupSpec extends FunSuite {
       )
     )
 
-    // 链式操作：按部门分组 -> 计算平均薪资 -> flatten 为 ZSetDB
+    // 链式操作：按部门分组 -> 计算平均薪资 -> flatten 为 ZDataset
     val flattenedAvg = employees
       .groupBy(_.department)
       .avg(_.salary)
@@ -179,8 +179,8 @@ class ZSetDBGroupSpec extends FunSuite {
     assertEquals(salesEntry._2, 62500.0) // (60000 + 65000) / 2
   }
 
-  test("链式操作：groupBy -> agg -> flatten -> ZSetDB操作") {
-    val sales = ZSetDB.fromIntIterable(
+  test("链式操作：groupBy -> agg -> flatten -> ZDataset操作") {
+    val sales = ZDataset.fromIntIterable(
       List(
         Sale(1, "Laptop", 1200, "North"),
         Sale(2, "Mouse", 25, "North"),
@@ -205,7 +205,7 @@ class ZSetDBGroupSpec extends FunSuite {
 
   // === 复杂链式场景测试 ===
   test("复杂链式操作：多次 groupBy + agg + flatten") {
-    val students = ZSetDB.fromIntIterable(
+    val students = ZDataset.fromIntIterable(
       List(
         Student("Alice", "A", 95, "Math"),
         Student("Bob", "A", 85, "Math"),
@@ -246,7 +246,7 @@ class ZSetDBGroupSpec extends FunSuite {
 
   test("权重处理：链式操作 - 带权重的 groupBy 和聚合") {
     // 创建带权重的销售数据
-    val weightedSales = ZSetDB.fromPairs(
+    val weightedSales = ZDataset.fromPairs(
       List(
         (Sale(1, "Laptop", 1200, "North"), 2), // 权重为2，表示卖了2台
         (Sale(2, "Mouse", 25, "North"), 5),    // 权重为5，表示卖了5个
@@ -267,7 +267,7 @@ class ZSetDBGroupSpec extends FunSuite {
   }
 
   test("超长链式操作：groupBy -> agg -> flatten -> groupBy -> agg -> flatten") {
-    val employees = ZSetDB.fromIntIterable(
+    val employees = ZDataset.fromIntIterable(
       List(
         Employee("Alice", "Engineering", 80000, 25),
         Employee("Bob", "Engineering", 85000, 30),
@@ -282,7 +282,7 @@ class ZSetDBGroupSpec extends FunSuite {
     val finalResult = employees
       .groupBy(_.department)    // 按部门分组
       .avg(_.salary)            // 计算平均薪资
-      .flatten { (dept, avg) => // flatten 为 ZSetDB
+      .flatten { (dept, avg) => // flatten 为 ZDataset
         val avgSalary   = avg.getOrElse(0.0)
         val salaryLevel = if (avgSalary > 75000) "High" else "Medium"
         (dept, avgSalary, salaryLevel)
@@ -299,7 +299,7 @@ class ZSetDBGroupSpec extends FunSuite {
   }
 
   test("混合聚合链式操作") {
-    val sales = ZSetDB.fromIntIterable(
+    val sales = ZDataset.fromIntIterable(
       List(
         Sale(1, "Laptop", 1200, "North"),
         Sale(2, "Mouse", 25, "North"),
