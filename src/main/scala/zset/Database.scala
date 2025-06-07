@@ -1,5 +1,7 @@
 package com.example.zset
 
+import javax.naming.spi.DirStateFactory.Result
+
 /**
  * Abstract Database API trait defining fundamental database operations This trait provides a
  * minimal generic interface for database-like operations that can be implemented by different
@@ -9,6 +11,8 @@ package com.example.zset
  *   The container type for data storage
  */
 trait Database[Container[_]] {
+
+  type ResultSet[_, _]
 
   /**
    * Select/Project operation Projects specific fields using a projection function
@@ -67,10 +71,11 @@ trait Database[Container[_]] {
       fold: (A, Data) => A
   ): A
 
+  
   def groupBy[Data, Key](
       container: Container[Data],
       keyExtractor: Data => Key
-  ): Map[Key, Container[Data]]
+  ): ResultSet[Key, Data]
 
   /**
    * Count aggregation operation
@@ -178,8 +183,8 @@ object Database {
     def agg[A](init: A, fold: (A, Data) => A): A =
       db.agg(container, init, fold)
 
-    def groupBy[Key](keyExtractor: Data => Key): Map[Key, Container[Data]] =
-      db.groupBy(container, keyExtractor)
+    def groupBy[Key](keyExtractor: Data => Key): db.ResultSet[Key, Data] =
+      db.groupBy[Data, Key](container, keyExtractor)
 
     def count: Container[(Data, Int)] =
       db.count(container)

@@ -75,6 +75,8 @@ object ZSetDB {
    */
   given zsetDBDatabase[W: WeightType]: Database[[Data] =>> ZSetDB[Data, W]] with {
 
+    type ResultSet[K, D] = IndexedZDataset[K, D, W]
+    
     def select[A, B](
         container: ZSetDB[A, W],
         projection: A => B
@@ -125,12 +127,13 @@ object ZSetDB {
     def groupBy[Data, Key](
         container: ZSetDB[Data, W],
         keyExtractor: Data => Key
-    ): Map[Key, ZSetDB[Data, W]] = {
+    ): IndexedZDataset[Key, Data, W] = {
       val grouped = container.underlying.entries.groupBy { case (data, _) => keyExtractor(data) }
-      grouped.map { case (key, entries) =>
+      val indexed = grouped.map { case (key, entries) =>
         val zset = ZSet.fromPairs(entries)
         key -> ZSetDB(zset)
       }
+      IndexedZDataset(indexed)
     }
 
     def count[Data](
