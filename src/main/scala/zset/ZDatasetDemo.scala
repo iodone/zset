@@ -131,11 +131,11 @@ object ZDatasetDemo extends App {
   case class DepartmentEmployee(empName: String, deptName: String, salary: Int, budget: Int)
 
   val departmentEmployeeInfo = employeeDB
-    .select(emp => (emp.departmentName, emp))             // 准备join的key
-    .join(departmentDB.select(dept => (dept.name, dept))) // 与部门表关联
-    .select { case (deptName, emp, dept) =>
-      DepartmentEmployee(emp.name, deptName, emp.salary, dept.budget)
-    }
+    .join(
+      departmentDB,
+      employeeDB.on(_.departmentName) == departmentDB.on(_.name),
+      (emp: Employee, dept: Department) => DepartmentEmployee(emp.name, emp.departmentName, emp.salary, dept.budget)
+    )
     .where(_.salary > 50000) // 过滤高薪员工
     .sortBy(_.salary)        // 按薪资排序
   println(s"高薪员工部门信息: ${departmentEmployeeInfo}")

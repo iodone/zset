@@ -336,5 +336,4 @@ class ZDatasetGroupSpec extends FunSuite {
     assertEquals(northSummary._4, 612.5)  // avg
     assertEquals(northSummary._5, 2)      // count
   }
-
 }

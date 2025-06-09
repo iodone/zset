@@ -10,7 +10,9 @@ object ZDatasetOps {
   /**
    * 为ZDataset提供完整的Dataset API扩展方法 使用ZDataset自己的Dataset实例
    */
-  extension [Data, W: WeightType](ZDataset: ZDataset[Data, W])(using db: Dataset[[X] =>> ZDataset[X, W]]) {
+  extension [Data, W: WeightType](
+      ZDataset: ZDataset[Data, W]
+  )(using db: Dataset[[X] =>> ZDataset[X, W]]) {
 
     /**
      * Dataset-style select operation
@@ -42,11 +44,22 @@ object ZDatasetOps {
     def except(other: ZDataset[Data, W]): ZDataset[Data, W] =
       db.except(ZDataset, other)
 
+
+    /**
+     * Dataset-style field extractor
+     */
+    def on[Field](extractor: Data => Field): FieldExtractor[Data, Field] =
+      FieldExtractor(extractor)
+
     /**
      * Dataset-style join operation
      */
-    def join[A, B, K](other: ZDataset[(K, B), W])(using ev: Data =:= (K, A)): ZDataset[(K, A, B), W] =
-      db.join(ZDataset.asInstanceOf[ZDataset[(K, A), W]], other)
+    def join[OtherData, K, Result](
+        other: ZDataset[OtherData, W],
+        condition: EquiJoinCondition[Data, OtherData, K],
+        combiner: (Data, OtherData) => Result
+    ): ZDataset[Result, W] =
+      db.join(ZDataset, other, condition, combiner)
 
     /**
      * Dataset-style aggregate operation

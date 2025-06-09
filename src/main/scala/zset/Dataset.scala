@@ -30,6 +30,7 @@ trait Dataset[Container[_]] {
       predicate: Data => Boolean
   ): Container[Data]
 
+
   /**
    * Union operation Combines two containers
    */
@@ -57,10 +58,12 @@ trait Dataset[Container[_]] {
   /**
    * Join two containers on a common key Equivalent to SQL JOIN operation
    */
-  def join[A, B, K](
-      left: Container[(K, A)],
-      right: Container[(K, B)]
-  ): Container[(K, A, B)]
+  def join[A, B, K, Result](
+      left: Container[A],
+      right: Container[B],
+      joinCondition: EquiJoinCondition[A, B, K],
+      combiner: (A, B) => Result
+  ): Container[Result]
 
   /**
    * 基础聚合操作 - 基于 Feldera 的 aggregate API

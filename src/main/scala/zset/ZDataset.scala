@@ -76,7 +76,7 @@ object ZDataset {
   given ZDatasetDataset[W: WeightType]: Dataset[[Data] =>> ZDataset[Data, W]] with {
 
     type ResultSet[K, D] = IndexedZDataset[K, D, W]
-    
+
     def select[A, B](
         container: ZDataset[A, W],
         projection: A => B
@@ -107,14 +107,18 @@ object ZDataset {
     ): ZDataset[Data, W] =
       ZDataset(left.underlying.distinct.subtract(right.underlying.distinct).distinct)
 
-    def join[A, B, K](
-        left: ZDataset[(K, A), W],
-        right: ZDataset[(K, B), W]
-    ): ZDataset[(K, A, B), W] = {
-      val result = left.underlying.flatMap { case (k, a) =>
-        right.underlying.filter(_._1 == k).map { case (_, b) => (k, a, b) }
-      }
-      ZDataset(result)
+    def join[A, B, K, Result](
+        left: ZDataset[A, W],
+        right: ZDataset[B, W],
+        joinCondition: EquiJoinCondition[A, B, K],
+        combiner: (A, B) => Result
+    ): ZDataset[Result, W] = {
+      val leftGrouped  = groupBy(left, joinCondition.leftKeyExtractor)
+      val rightGrouped = groupBy(right, joinCondition.rightKeyExtractor)
+
+      val joined = leftGrouped.join(rightGrouped, joinCondition, combiner)
+
+      joined.flatten((key, data) => data)
     }
 
     def agg[Data, A](

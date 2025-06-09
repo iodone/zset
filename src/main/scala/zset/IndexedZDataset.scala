@@ -3,19 +3,8 @@ package com.example.zset
 import scala.collection.{immutable, Iterable}
 import com.example.zset.WeightType
 import com.example.zset.WeightType.{*, given}
+import com.example.zset.ZDatasetOps.*
 
-/**
- * IndexedZDataset - 索引化的ZSet数据集
- *
- * @param data
- *   内部的Map数据结构，键到ZDataset的映射
- * @tparam Key
- *   键类型
- * @tparam Data
- *   数据类型
- * @tparam Weight
- *   权重类型
- */
 case class IndexedZDataset[Key, Data, Weight: WeightType](
     private val data: Map[Key, ZDataset[Data, Weight]]
 ) {
@@ -82,19 +71,60 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
       .filter { case (_, weight) => !weight.isZero }
   }
 
+  def on[Field](extractor: Data => Field): FieldExtractor[Data, Field] =
+    FieldExtractor(extractor)
+
+  /**
+   * 基于条件的Join操作 - 真正的等值连接 在相同外层key的组内，使用condition.matches进行数据级别的匹配
+   */
+  def join[OtherData, ResultData](
+      other: IndexedZDataset[Key, OtherData, Weight],
+      condition: JoinCondition[Data, OtherData],
+      combiner: (Data, OtherData) => ResultData
+  ): IndexedZDataset[Key, ResultData, Weight] = {
+
+    val weightType = summon[WeightType[Weight]]
+    val newData = data.flatMap { case (key, zDataset) =>
+      other.data.get(key).map { otherZDataset =>
+        val joinedPairs = for {
+          (leftData, leftWeight)   <- zDataset.underlying.entries
+          (rightData, rightWeight) <- otherZDataset.underlying.entries
+          if condition.matches(leftData, rightData)
+        } yield {
+          val resultData     = combiner(leftData, rightData)
+          val combinedWeight = leftWeight * rightWeight
+          (resultData, combinedWeight)
+        }
+
+        val joinedZSet = ZDataset(ZSet.fromPairs(joinedPairs))
+        key -> joinedZSet
+      }
+    }
+    IndexedZDataset(newData)
+  }
+
+  def crossJoin[OtherData, ResultData](
+      other: IndexedZDataset[Key, OtherData, Weight],
+      combiner: (Data, OtherData) => ResultData
+  ): IndexedZDataset[Key, ResultData, Weight] = {
+    val weightType = summon[WeightType[Weight]]
+
+    val newData = data.flatMap { case (key, zDataset) =>
+      other.data.get(key).map { otherZDataset =>
+        // 直接进行笛卡尔积，不使用任何条件过滤
+        val joinedZSet = zDataset.cartesianProduct(otherZDataset, combiner)
+        key -> joinedZSet
+      }
+    }
+    IndexedZDataset(newData)
+  }
+
   def aggregate[A](init: A)(fold: (A, Data, Weight) => A): IndexedZDataset[Key, A, Weight] = {
     val weightType = summon[WeightType[Weight]]
     val newData = data.map { case (key, zset) =>
       key -> ZDataset(ZSet.single(zset.underlying.aggregate(init)(fold), weightType.one))
     }
     IndexedZDataset(newData)
-  }
-
-  def aggregateWith[A, B](init: A)(fold: (A, Data, Weight) => A)(finalize: A => B): B = {
-    val result = data.values.foldLeft(init) { (acc, zset) =>
-      zset.underlying.aggregate(acc)(fold)
-    }
-    finalize(result)
   }
 
   def sum[N: Numeric](extract: Data => N): IndexedZDataset[Key, N, Weight] = {
@@ -241,7 +271,6 @@ case class IndexedZDataset[Key, Data, Weight: WeightType](
 }
 
 object IndexedZDataset {
-
 
   /**
    * 创建空的 IndexedZDataset

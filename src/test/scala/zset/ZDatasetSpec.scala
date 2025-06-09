@@ -239,7 +239,11 @@ class ZDatasetSpec extends FunSuite {
     val customers = ZDataset.fromIntIterable(List((1, "Alice"), (2, "Bob"), (3, "Charlie")))
     val orders = ZDataset.fromIntIterable(List((1, 100.0), (2, 150.0), (1, 75.0)))
 
-    val result = customers.join(orders)
+    val result = customers.join(
+      orders,
+      customers.on(_._1) == orders.on(_._1),
+      (customer: (Int, String), order: (Int, Double)) => (customer._1, customer._2, order._2)
+    )
     assertEquals(result.underlying.entryCount, 3)
     assert(result.underlying.contains((1, "Alice", 100.0)))
     assert(result.underlying.contains((1, "Alice", 75.0)))
@@ -251,7 +255,11 @@ class ZDatasetSpec extends FunSuite {
     val employees = ZDataset.fromIntIterable(List((1, Person("Alice", 25)), (2, Person("Bob", 30))))
     val salaries = ZDataset.fromIntIterable(List((1, 50000.0), (2, 60000.0)))
 
-    val result = employees.join(salaries)
+    val result = employees.join(
+      salaries,
+      employees.on(_._1) == salaries.on(_._1),
+      (employee: (Int, Person), salary: (Int, Double)) => (employee._1, employee._2, salary._2)
+    )
     assertEquals(result.underlying.entryCount, 2)
     assert(result.underlying.contains((1, Person("Alice", 25), 50000.0)))
     assert(result.underlying.contains((2, Person("Bob", 30), 60000.0)))

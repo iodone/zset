@@ -54,7 +54,7 @@ Z-Set 在数学上形成一个阿贝尔群（Abelian Group），继承了整数�
    - 提供丰富的函数式操作API
    - 支持类型安全的泛型操作
 
-3. **ZSetDataset**: 数据库风格的高级操作
+3. **ZDataset**: 数据库风格的高级操作
    - 实现 SQL 风格操作：JOIN、GROUP BY、SELECT、WHERE、UNION 等
    - 支持聚合函数：COUNT、SUM、AVG 等
    - 提供排序和分页功能（sortBy、take）
